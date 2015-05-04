@@ -35,40 +35,108 @@ function stanford_jira_exposed_menu() {
 }
 
 /**
- * Implements hook_block_info().
+ * Implements hook_ctools_plugin_api().
  */
-function stanford_jira_exposed_block_info() {
+function stanford_jira_exposed_ctools_plugin_api($module = NULL, $api = NULL) {
+  if ($module == "bean_admin_ui" && $api == "bean") {
+    return array("version" => "5");
+  }
+  if ($module == "bean" && $api == "types") {
+    return array("version" => "5");
+  }
+}
 
-  $blocks['testone'] = array(
-    'info' => t(''),
-    'cache' => DRUPAL_NO_CACHE
+/**
+ * [stanford_jira_exposed_bean_types_api_info description]
+ * @return [type] [description]
+ */
+function stanford_jira_exposed_bean_types_api_info() {
+  return array("api" => 5);
+}
+
+/**
+ * Implementation of hook_bean_types().
+ */
+function stanford_jira_exposed_bean_types() {
+  $plugins = array();
+  $plugin_path = drupal_get_path('module', 'stanford_jira_exposed') . '/plugins/bean';
+  $plugins['stanford_jira'] = array(
+    'label' => t("Stanford Jira"),
+    'description' => t("Allows the content author to select from a number of configuration options in order to display ticket information from Jira."),
+    'type' => 'stanford_jira',
+    'handler' => array(
+      'class' => 'StanfordJiraExposedBean',
+      'parent' => "bean",
+      'path' => $plugin_path,
+      'file' => 'stanford_jira_exposed.bean.type.inc',
+    ),
+  );
+  return $plugins;
+}
+
+/**
+ * [stanford_jira_exposed_get_something description]
+ * @return [type] [description]
+ */
+function stanford_jira_exposed_get_something() {
+  $username = variable_get("jira_rest_username");
+  $password = variable_get("jira_rest_password");
+  $jql = 'project = BASIC AND fixVersion = "JS 4.5"';
+
+  $jira = jira_rest_searchissue($username, $password, $jql);
+
+  dpm($jira);
+  $vars = array(
+    'header' => array(
+      'type', 'key', 'title', 'suggested',
+    ),
+    'rows' => array(),
   );
 
-  return $blocks;
-}
-
-/**
- * Implements hook_block_view().
- */
-function stanford_jira_exposed_block_view($delta = '') {
-  $block = array();
-
-  switch ($delta) {
-    case 'testone':
-      $block['subject'] = t('Test');
-      // $block['content'] =
-      stanford_jira_exposed_block_testone_view($block);
-      break;
-
+  foreach ($jira->issues as $k => $issue) {
+    $vars['rows'][] = array($issue->fields->issuetype->name, $issue->key, $issue->fields->summary, $issue->fields->created);
   }
-  return $block;
+
+  $content['datatable'] = array();
+  $content['datatable']['#theme'] = "table";
+  $content['datatable']['#header'] = $vars['header'];
+  $content['datatable']['#rows'] = $vars['rows'];
 }
 
 /**
- * Generates the content for the testone block.
- * @param  [type] &$block [description]
- * @return [type]         [description]
+ * Builds out Jira Query Language Query.
+ * @param  [type] $project [description]
+ * @param  [type] $type    [description]
+ * @param  [type] $key     [description]
+ * @return [type]          [description]
  */
-function stanford_jira_exposed_block_testone_view(&$block) {
+function stanford_jira_exposed_build_jql($project = "ANY", $type = null, $key = null) {
 
+  $query = array();
+  $query[] = "project = " . $project;
+
+  if (!is_null($type)) {
+    switch ($type) {
+      case 'version':
+        $query[] = "fixVersion = \"" . $key . "\"";
+        break;
+    }
+  }
+
+  return implode(" AND ", $query);
+}
+
+/**
+ * [stanford_jira_exposed_get_issues description]
+ * @param  [type] $jql [description]
+ * @return [type]      [description]
+ */
+function stanford_jira_exposed_get_issues($jql = "") {
+  $username = variable_get("jira_rest_username");
+  $password = variable_get("jira_rest_password");
+  $jira = jira_rest_searchissue($username, $password, $jql);
+  if (isset($jira->issues)) {
+    return $jira->issues;
+  }
+  throw new Exception("Could not get issues");
 }

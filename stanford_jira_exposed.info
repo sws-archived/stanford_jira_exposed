@@ -5,6 +5,7 @@ package = Stanford
 version = 7.x-1.x
 project status url = https://github.com/SU-SWS/stanford_jira_exposed
 dependencies[] = jira_rest
+files[] = plugins/bean/stanford_jira_exposed.bean.type.inc
+
 ; stylesheets[] = css/styles.css
-; files[] = includes/include.inc
 ; scripts[] = js/script.js
