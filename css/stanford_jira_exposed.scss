@@ -1,0 +1,97 @@
+@import "compass/css3",
+"compass/utilities/general/clearfix";
+
+/**
+ * Containers
+ */
+.jira-container {
+  @include clearfix;
+}
+
+.jira-agile-header {
+  margin-bottom: .5em;
+}
+
+.jira-agile-body {
+  margin-bottom: .5em;
+}
+
+.content {
+
+  /**
+   * Agile header
+   */
+  .agile-header-list {
+    @include clearfix;
+    margin: 0px;
+
+    li[class*="span"] {
+      margin: 0px;
+      padding: 0px;
+      margin-right: 0.2em;
+    } //li[span]
+    > li {
+      background: #CCC;
+      border: solid 1px #666;
+      text-indent: 1em;
+      vertical-align: middle;
+
+      h3 {
+        line-height: 1.5em;
+        margin: 0px;
+        padding: 0px;
+      } // h3
+    } // li
+  } // .agile-header-list
+
+  /**
+   * Agile body
+   */
+  .agile-body-list {
+    margin: 0 0.2em 0 0;
+    @include clearfix;
+
+    > li {
+      border: solid 1px #CCC;
+      border-left: solid 3px #8c1515;
+      padding: 0.3em;
+      background: #EEE;
+      list-style-type: none;
+      margin: 0 0 0.2em 0;
+    } // li
+
+  } // . agile-body-list
+
+  .agile-component-list {
+    margin-bottom: 0px;
+
+    li {
+      margin: 0.3em 0.5em 0.3em 0;
+      padding: 0.2em 0.5em;
+      line-height: 1em;
+      background: #8c1515;
+      list-style-type: none;
+      @include inline-block;
+      color: #FFF;
+      font-weight: bold;
+      @include border-radius(1em, 1em);
+    } // li
+
+  } // .agile-component-list
+
+  .agileitem-wrapper {
+
+    > div {
+      margin-bottom: .2em;
+      @include clearfix;
+    }
+
+    .agileitem-key {
+      @include inline-block;
+      vertical-align: top;
+      margin: 0 0 0 0.3em;
+    } // .agileitem-key
+
+  } // .agileitem-wrapper
+
+} // .content

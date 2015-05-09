@@ -8,7 +8,11 @@ class StanfordJiraExposedBean extends BeanPlugin {
   // Storage for original content.
   public $content = "";
   // Storage for wrapped bean.
-  public $wrapped = null;
+  public $wrapped = NULL;
+  // Storage for status categories.
+  public $statusCategories = array();
+  // Storage for status types.
+  public $statusTypes = array();
 
   /**
    * Overrides the view method.
@@ -22,7 +26,7 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $this->setContent($content);
 
     // Switch output theme based on type not view mode.
-    if (!isset($bean->field_jira_selection_type)) {
+    if (!isset($bean->field_jira_layout)) {
       return $content;
     }
 
@@ -30,27 +34,33 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $wrap = entity_metadata_wrapper('bean', $bean);
     $this->setWrapped($wrap);
 
-    $type = $wrap->field_jira_selection_type->value();
-    $function = "theme_" . $type;
+    // Get the theme function.
+    $type = $wrap->field_jira_layout->value();
+    $function = "theme" . ucfirst($type);
     if (!method_exists($this, $function)) {
+      drupal_set_message("Theme function not found", "error");
       return $content;
     }
 
+    // Call it.
     return $this->{$function}();
   }
 
   // THEME FUNCTIONS
   // ---------------------------------------------------------------------------
 
-  public function theme_version() {
+  /**
+   * [themeTable description]
+   * @return [type] [description]
+   */
+  public function themeTable() {
     $bean = $this->getWrapped();
-    $project = $bean->field_jira_project_id->value();
-    $key = $bean->field_jira_type_key->value();
-    $jql = stanford_jira_exposed_build_jql($project, 'version', $key);
+    $jql = $bean->field_jira_jql->value();
     $issues = stanford_jira_exposed_get_issues($jql);
 
     // If after all of that just return the original content.
     if (!$issues) {
+      drupal_set_message("Could not retreive issues from Jira", "error");
       return $this->getContent();
     }
 
@@ -79,6 +89,50 @@ class StanfordJiraExposedBean extends BeanPlugin {
     // Return for rendering.
     return $content;
   }
+
+  /**
+   * [theme_agile description]
+   * @return [type] [description]
+   */
+  public function themeAgile() {
+    $bean = $this->getWrapped();
+    $jql = $bean->field_jira_jql->value();
+    $issues = stanford_jira_exposed_get_issues($jql);
+
+    // If after all of that just return the original content.
+    if (!$issues) {
+      drupal_set_message("Could not retreive issues from Jira", "error");
+      return $this->getContent();
+    }
+
+    // Get the agile category information.
+    $types = $this->getStatusTypes();
+    $groups = $this->sortIssuesByStatus($issues, $types);
+    $group_keys = array_keys($groups);
+
+    // Agile header contents.
+    $content['agileheader'] = array(
+      '#theme' => "agileheader",
+      '#items' => $group_keys,
+      '#weight' => -1,
+    );
+
+    // Agile body contents.
+    $content['agilebody'] = array(
+      '#theme' => "agilebody",
+      '#groups' => $groups,
+    );
+
+    // Add the bodies.
+    $this->addBodies($content);
+
+    // Add the CSS
+    $content['#attached']['css'][] = drupal_get_path("module" , "stanford_jira_exposed") . "/css/stanford_jira_exposed.css";
+
+    // Return for rendering.
+    return $content;
+  }
+
 
   /**
    * Adds the above and below bodies to the output.
@@ -140,4 +194,129 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function getWrapped() {
     return $this->wrapped;
   }
+
+  /**
+   * [getStatusCategories description]
+   * @return [type] [description]
+   */
+  public function getStatusCategories($reset = FALSE) {
+
+    // Get from storage if available.
+    if (!empty($this->statusCategories) && !$reset) {
+      return $this->statusCategories;
+    }
+
+    // Fetch them.
+    $url = "/statuscategory";
+    $ch = jira_rest_get_curl_resource($this->getUsername(), $this->getPassword(), $url);
+    try {
+      $results = jira_rest_curl_execute($ch);
+    }
+    catch(JiraRestExpection $e) {
+      return FALSE;
+    }
+
+    // Save into categories and return.
+    $this->statusCategories = $results;
+    return $results;
+  }
+
+  /**
+   * [getStatusTypes description]
+   * @param  boolean $reset [description]
+   * @return [type]         [description]
+   */
+  public function getStatusTypes($reset = FALSE) {
+    // Get from storage if available.
+    if (!empty($this->statusTypes) && !$reset) {
+      return $this->statusTypes;
+    }
+
+    // Fetch them.
+    $url = "/status";
+    $ch = jira_rest_get_curl_resource($this->getUsername(), $this->getPassword(), $url);
+    try {
+      $results = jira_rest_curl_execute($ch);
+    }
+    catch(JiraRestExpection $e) {
+      return FALSE;
+    }
+
+    // Save into categories and return.
+    $this->statusTypes = $results;
+    return $results;
+  }
+
+  /**
+   * [getUsername description]
+   * @return [type] [description]
+   */
+  public function getUsername() {
+    return variable_get('jira_rest_username', '');
+  }
+
+  /**
+   * [getPassword description]
+   * @return [type] [description]
+   */
+  public function getPassword() {
+    return variable_get('jira_rest_password', '');
+  }
+
+
+  /**
+   * ***************************************************************************
+   * UTILITY FUNCTIONS
+   * ***************************************************************************
+   */
+
+  /**
+   * [filterGroups description]
+   * @param  [type] $items [description]
+   * @param  [type] $types [description]
+   * @return [type]        [description]
+   */
+  public function sortIssuesByStatus($items, $types) {
+    $groups = array();
+
+    // For weighting.
+    $statusCategories = $this->getStatusCategories();
+
+    // Loop through the categories so we get the correct order.
+    foreach ($statusCategories as $cat) {
+      foreach ($types as $type) {
+        // Skip ids that don't match so that we get the proper order.
+
+        if ($type->statusCategory->id !== $cat->id) {
+          continue;
+        }
+
+        $group = $this->filterIssuesByStatusType($items, $type);
+        if (!empty($group)) {
+          $groups[$type->name] = $group;
+        }
+      }
+    }
+
+    return $groups;
+  }
+
+  /**
+   * [stanford_jira_exposed_filter_issues_by_category description]
+   * @param  [type] $items    [description]
+   * @param  [type] $category [description]
+   * @return [type]           [description]
+   */
+  public function filterIssuesByStatusType($items, $type) {
+
+    foreach ($items as $i => $item) {
+      if ($item->fields->status->name !== $type->name) {
+        unset($items[$i]);
+      }
+    }
+
+    return $items;
+  }
+
+
 }
