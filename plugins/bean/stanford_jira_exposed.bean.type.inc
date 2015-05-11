@@ -9,10 +9,6 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public $content = "";
   // Storage for wrapped bean.
   public $wrapped = NULL;
-  // Storage for status categories.
-  public $statusCategories = array();
-  // Storage for status types.
-  public $statusTypes = array();
 
   /**
    * Overrides the view method.
@@ -97,7 +93,8 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function themeAgile() {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
-    $issues = stanford_jira_exposed_get_issues($jql);
+    $connector = new \StanfordJiraExposed\JiraConnector();
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
 
     // If after all of that just return the original content.
     if (!$issues) {
@@ -106,7 +103,7 @@ class StanfordJiraExposedBean extends BeanPlugin {
     }
 
     // Get the agile category information.
-    $types = $this->getStatusTypes();
+    $types = $connector->restAPI("statustype")->fetch();
     $groups = $this->sortIssuesByStatus($issues, $types);
     $group_keys = array_keys($groups);
 
@@ -195,74 +192,6 @@ class StanfordJiraExposedBean extends BeanPlugin {
     return $this->wrapped;
   }
 
-  /**
-   * [getStatusCategories description]
-   * @return [type] [description]
-   */
-  public function getStatusCategories($reset = FALSE) {
-
-    // Get from storage if available.
-    if (!empty($this->statusCategories) && !$reset) {
-      return $this->statusCategories;
-    }
-
-    // Fetch them.
-    $url = "/statuscategory";
-    $ch = jira_rest_get_curl_resource($this->getUsername(), $this->getPassword(), $url);
-    try {
-      $results = jira_rest_curl_execute($ch);
-    }
-    catch(JiraRestExpection $e) {
-      return FALSE;
-    }
-
-    // Save into categories and return.
-    $this->statusCategories = $results;
-    return $results;
-  }
-
-  /**
-   * [getStatusTypes description]
-   * @param  boolean $reset [description]
-   * @return [type]         [description]
-   */
-  public function getStatusTypes($reset = FALSE) {
-    // Get from storage if available.
-    if (!empty($this->statusTypes) && !$reset) {
-      return $this->statusTypes;
-    }
-
-    // Fetch them.
-    $url = "/status";
-    $ch = jira_rest_get_curl_resource($this->getUsername(), $this->getPassword(), $url);
-    try {
-      $results = jira_rest_curl_execute($ch);
-    }
-    catch(JiraRestExpection $e) {
-      return FALSE;
-    }
-
-    // Save into categories and return.
-    $this->statusTypes = $results;
-    return $results;
-  }
-
-  /**
-   * [getUsername description]
-   * @return [type] [description]
-   */
-  public function getUsername() {
-    return variable_get('jira_rest_username', '');
-  }
-
-  /**
-   * [getPassword description]
-   * @return [type] [description]
-   */
-  public function getPassword() {
-    return variable_get('jira_rest_password', '');
-  }
-
 
   /**
    * ***************************************************************************
@@ -277,10 +206,15 @@ class StanfordJiraExposedBean extends BeanPlugin {
    * @return [type]        [description]
    */
   public function sortIssuesByStatus($items, $types) {
-    $groups = array();
-
+    // JiraRestConnector.
+    $connector = new \StanfordJiraExposed\JiraConnector();
     // For weighting.
-    $statusCategories = $this->getStatusCategories();
+    $statusCategories = $connector->restAPI("statuscategories")->fetch();
+
+    // @Todo: Create way to pick the options or set a minimum instead of this.
+    $groups = array(
+      'Open' => array('catid' => 1), 'In Progress' => array('catid' => 2), 'Testing' => array('catid' => 4), 'Resolved' => array('catid' => 3),
+    );
 
     // Loop through the categories so we get the correct order.
     foreach ($statusCategories as $cat) {
@@ -292,12 +226,17 @@ class StanfordJiraExposedBean extends BeanPlugin {
         }
 
         $group = $this->filterIssuesByStatusType($items, $type);
-        if (!empty($group)) {
+
+        if (!empty($group) || in_array($type->name, $groups)) {
           $groups[$type->name] = $group;
+          $groups[$type->name]['catid'] = $cat->id;
         }
       }
     }
 
+    // Custom ordering based on catId.
+    $order = $this->getCategorySortOrder();
+    stanford_jira_exposed_sort_by_category_key($groups, $order);
     return $groups;
   }
 
@@ -318,5 +257,27 @@ class StanfordJiraExposedBean extends BeanPlugin {
     return $items;
   }
 
+  /**
+   * [getCategorySortOrder description]
+   * @return [type] [description]
+   */
+  public function getCategorySortOrder() {
+    $order = array();
+    // JiraRestConnector.
+    $connector = new \StanfordJiraExposed\JiraConnector();
+    // For weighting.
+    $categories = $connector->restAPI("statuscategories")->fetch();
+    foreach ($categories as $i => $cat) {
+      $order[] = $cat->id;
+    }
+    return $order;
+  }
+
+  // /rest/greenhopper/1.0/rapidview/{rapid_view_id} //// to get the information about Scrum boards
+  // /rest/greenhopper/1.0/rapidviews/list
+  // /rest/greenhopper/1.0/sprintquery/{rapid_view_id}?includeFutureSprints=true  //// to get the information about sprints that are included in selected Scrum board
+  // /rest/greenhopper/1.0/sprints/
+  // /rest/greenhopper/1.0/sprint/{sprint_id?}
+  // /rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId={rapidViewId}&sprintId={sprintID} to get list of issues for that sprint.
 
 }

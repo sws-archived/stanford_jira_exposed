@@ -66,13 +66,17 @@
   list-style-type: none;
   margin: 0 0 0.2em 0;
 }
-/* line 65, stanford_jira_exposed.scss */
+/* line 63, stanford_jira_exposed.scss */
+.content .agile-body-list .agileitem-empty {
+  opacity: 0;
+}
+/* line 69, stanford_jira_exposed.scss */
 .content .agile-component-list {
   margin-bottom: 0px;
 }
-/* line 68, stanford_jira_exposed.scss */
+/* line 72, stanford_jira_exposed.scss */
 .content .agile-component-list li {
-  margin: 0.3em 0.5em 0.3em 0;
+  margin: 0.3em 0em 0.3em 0;
   padding: 0.2em 0.5em;
   line-height: 1em;
   background: #8c1515;
@@ -84,18 +88,18 @@
   zoom: 1;
   *display: inline;
   color: #FFF;
-  font-weight: bold;
   -webkit-border-radius: 1em 1em;
   -moz-border-radius: 1em / 1em;
   border-radius: 1em / 1em;
+  text-transform: lowercase;
 }
-/* line 84, stanford_jira_exposed.scss */
+/* line 88, stanford_jira_exposed.scss */
 .content .agileitem-wrapper > div {
   margin-bottom: .2em;
   overflow: hidden;
   *zoom: 1;
 }
-/* line 89, stanford_jira_exposed.scss */
+/* line 93, stanford_jira_exposed.scss */
 .content .agileitem-wrapper .agileitem-key {
   display: -moz-inline-stack;
   display: inline-block;

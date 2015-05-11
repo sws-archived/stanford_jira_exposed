@@ -3,6 +3,9 @@
  * @file
  */
 
+// Make sure this is loaded.
+require_once "includes/autoloader.php";
+
 /**
  * Implements hook_help().
  */
@@ -75,22 +78,6 @@ function stanford_jira_exposed_bean_types() {
 }
 
 /**
- * [stanford_jira_exposed_get_issues description]
- * @param  [type] $jql [description]
- * @return [type]      [description]
- */
-function stanford_jira_exposed_get_issues($jql = "") {
-  $username = variable_get("jira_rest_username");
-  $password = variable_get("jira_rest_password");
-  $jira = jira_rest_searchissue($username, $password, $jql);
-  if (isset($jira->issues)) {
-    return $jira->issues;
-  }
-  throw new Exception("Could not get issues");
-}
-
-
-/**
  * Implements hook_theme().
  */
 function stanford_jira_exposed_theme($existing, $type, $theme, $path) {
@@ -116,5 +103,27 @@ function stanford_jira_exposed_theme($existing, $type, $theme, $path) {
       'variables' => array('items' => NULL),
     ),
   );
+}
+
+/**
+ * [stanford_jira_exposed_sort_by_weight_key description]
+ * @param  [type] $a [description]
+ * @param  [type] $b [description]
+ * @return [type]    [description]
+ */
+function stanford_jira_exposed_sort_by_category_key(&$array, $order) {
+
+  $original = $array;
+  $array = array();
+
+  foreach ($order as $key) {
+    foreach ($original as $index => $item) {
+      if (isset($item['catid']) && $item['catid'] == $key) {
+        unset($item['catid']);
+        $array[$index] = $item;
+      }
+    }
+  }
+
 }
 

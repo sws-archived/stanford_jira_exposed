@@ -43,8 +43,13 @@ function theme_agilebody($vars) {
 
   foreach ($groups as $key => $values) {
     $list = array('items' => array(), 'title' => '', 'type' => 'ul', 'attributes' => array('class' => array('agile-body-list', $span)));
-    foreach ($values as $k => $v) {
-      $list['items'][] = array("data" => theme("agileitem", array("item" => $v)), "class" => array("agileitem"));
+    if (count($values)) {
+      foreach ($values as $k => $v) {
+        $list['items'][] = array("data" => theme("agileitem", array("item" => $v)), "class" => array("agileitem"));
+      }
+    }
+    else {
+      $list['items'][] = array("data" => "", "class" => array("agileitem-empty"));
     }
     $content .= theme_item_list($list);
   }

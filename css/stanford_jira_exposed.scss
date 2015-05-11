@@ -60,21 +60,25 @@
       margin: 0 0 0.2em 0;
     } // li
 
+    .agileitem-empty {
+      opacity: 0;
+    }
+
   } // . agile-body-list
 
   .agile-component-list {
     margin-bottom: 0px;
 
     li {
-      margin: 0.3em 0.5em 0.3em 0;
+      margin: 0.3em 0em 0.3em 0;
       padding: 0.2em 0.5em;
       line-height: 1em;
       background: #8c1515;
       list-style-type: none;
       @include inline-block;
       color: #FFF;
-      font-weight: bold;
       @include border-radius(1em, 1em);
+      text-transform: lowercase;
     } // li
 
   } // .agile-component-list
