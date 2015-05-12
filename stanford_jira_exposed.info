@@ -2,9 +2,10 @@ name = Stanford Jira Exposed
 description = Allows administrators to create pages of exposed tickets.
 core = 7.x
 package = Stanford
-version = 7.x-1.x
+version = 7.x-1.0-dev
 project status url = https://github.com/SU-SWS/stanford_jira_exposed
 dependencies[] = jira_rest
+dependencies[] = stanford_jira_exposed_block_types
 files[] = plugins/bean/stanford_jira_exposed.bean.type.inc
 
 ; stylesheets[] = css/styles.css

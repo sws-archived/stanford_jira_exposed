@@ -30,4 +30,3 @@ features[field_instance][] = bean-stanford_jira-field_jira_fields
 features[field_instance][] = bean-stanford_jira-field_jira_jql
 features[field_instance][] = bean-stanford_jira-field_jira_layout
 features[field_instance][] = field_collection_item-field_jira_fields-field_jira_field_options
-project path = sites/default/modules/stanford/stanford_jira_exposed/modules
