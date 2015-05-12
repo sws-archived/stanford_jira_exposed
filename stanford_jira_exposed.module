@@ -33,7 +33,7 @@ function stanford_jira_exposed_menu() {
    *  'type' => MENU_SUGGESTED_ITEM,
    *);
    */
-
+  $items = array();
   return $items;
 }
 
