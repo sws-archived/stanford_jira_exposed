@@ -54,7 +54,12 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function themeTable() {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
-    $fields = unserialize($bean->field_jira_field_storage->value());
+    // $fields = unserialize($bean->field_jira_field_storage->value());
+    $fields = array();
+    $fcs = $bean->field_jira_fields->value();
+    foreach ($fcs as $i => $fc_item) {
+      $fields[$fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"]] = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+    }
 
     $connector = $this->getConnector();
     $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
@@ -96,14 +101,20 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
     // Loop through the fields and get the title.
     foreach ($fields as $i => $field) {
-      // Skip unchecked fields.
-      if (empty($field)) {
-        continue;
+
+      $parts = explode(".", $field);
+      $field_name = !empty($parts[1]) ? $parts[1] : $parts[0];
+
+      // Special Case for key.
+      if ($parts[0] == "key") {
+        $rows[] = t("Issue Key");
+      }
+      else {
+        // Use the connector like this so it can use it's built in cache.
+        $fieldInfo = $fieldConnector->info($field_name);
+        $rows[] = check_plain($fieldInfo->name);
       }
 
-      // Use the connector like this so it can use it's built in cache.
-      $fieldInfo = $fieldConnector->info($field);
-      $rows[] = check_plain($fieldInfo->name);
     }
 
     return $rows;
@@ -111,103 +122,160 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
   /**
    * [formatTableFields description]
-   * @return [type] [description]
+   * @param  [type] $issues [description]
+   * @param  [type] $fields [description]
+   * @return [type]         [description]
    */
   public function formatTableFields($issues, $fields) {
     $rows = array();
     $connector = $this->getConnector();
     $fieldConnector = $connector->restAPI("fields");
 
-    // Loop through the issues and pull out what we want.
-    foreach ($issues as $k => $issue) {
+    foreach($issues as $k => $issue) {
       $row = array();
-      foreach ($fields as $i => $field) {
-        // Skip unchecked fields.
-        if (empty($field)) {
-          continue;
-        }
-
-        // Use the connector like this so it can use it's built in cache.
-        $fieldInfo = $fieldConnector->info($i);
-
-        // Some fields are "special" and are not in the schema.
-        if (isset($fieldInfo->schema->type)) {
-          switch($fieldInfo->schema->type) {
-
-            case "array":
-            case "version":
-              $data = array();
-              foreach ($issue->fields->{$field} as $item) {
-                if (is_string(($item))) {
-                  $data[] = check_plain($item);
-                }
-                else {
-                  $data[] = check_plain($item->name);
-                }
-              }
-              $row[] = implode(", ", $data);
-              break;
-
-            case "datetime":
-            case "date":
-              $time = strtotime($issue->fields->{$field});
-              $date = "";
-              if ($time) {
-                $date = format_date($time, 'custom', "F d, Y");
-              }
-              $row[] = $date;
-              break;
-
-            //  case "timetracking":
-            //  break;
-
-            case "issuetype":
-            case "status":
-            case "resolution":
-            case "priority":
-              if (!empty($issue->fields->{$field}->name)) {
-                $row[] = check_plain($issue->fields->{$field}->name);
-              }
-              break;
-
-            case "account":
-            case "user":
-              if (isset($issue->fields->{$field}->displayName)) {
-                $row[] = check_plain($issue->fields->{$field}->displayName);
-              }
-              else {
-                $row[] = t("Annonymous");
-              }
-              break;
-
-            case "number":
-              $row[] = (int) check_plain($issue->fields->{$field}->{$field});
-              break;
-
-            case "progress":
-              $row[] = (int) check_plain($issue->fields->{$field}->progress);
-              break;
-
-            case "project":
-              $row[] = check_plain($issue->fields->{$field}->key);
-              break;
-
-            case "string":
-            default:
-              $row[] = check_plain($issue->fields->{$field});
-
-          }
-        }
-        // Special case for the issue key.
-        else if($fieldInfo->id == "issuekey") {
-          $row[] = $issue->key;
-        }
-
+      foreach ($fields as $field) {
+        $value = $this->dotsToArrows($field, $issue);
+        $row[] = $this->formatFieldValue($value, $field, $fieldConnector);
       }
       $rows[] = $row;
     }
 
     return $rows;
+  }
+
+  /**
+   * [dotsToArrows description]
+   * @param  [type] $field [description]
+   * @param  [type] $issue [description]
+   * @return [type]        [description]
+   */
+  public function dotsToArrows($field, $issue) {
+    $parts = explode(".", $field);
+    $index = array_search("*", $parts);
+    $value = "";
+
+    // If the selector is getting an array of values break it up a bit.
+    if ($index !== FALSE) {
+      $ends = array_slice($parts, ($index + 1));
+      $parts = array_slice($parts, 0, $index);
+    }
+
+    $count = count($parts);
+    switch ($count) {
+      case 5:
+        if (isset($issue->{$parts[0]}->{$parts[1]}->{$parts[2]}->{$parts[3]}->{$parts[4]})) {
+          $value = $issue->{$parts[0]}->{$parts[1]}->{$parts[2]}->{$parts[3]}->{$parts[4]};
+        }
+        break;
+
+      case 4:
+        if (isset($issue->{$parts[0]}->{$parts[1]}->{$parts[2]}->{$parts[3]})) {
+          $value = $issue->{$parts[0]}->{$parts[1]}->{$parts[2]}->{$parts[3]};
+        }
+        break;
+
+      case 3:
+        if (isset($issue->{$parts[0]}->{$parts[1]}->{$parts[2]})) {
+          $value = $issue->{$parts[0]}->{$parts[1]}->{$parts[2]};
+        }
+        break;
+
+      case 2:
+        if (isset($issue->{$parts[0]}->{$parts[1]})) {
+          $value = $issue->{$parts[0]}->{$parts[1]};
+        }
+        break;
+
+      case 1:
+      default:
+        if (isset($issue->{$parts[0]})) {
+          $value = $issue->{$parts[0]};
+        }
+    }
+
+    // We have an array!
+    if (is_array($value)) {
+      $join = array();
+      $end_count = count($ends);
+      foreach ($value as $more) {
+        switch ($end_count) {
+          case 3:
+            if (isset($more->{$ends[0]}->{$ends[1]}->{$ends[2]})) {
+              $join[] = $more->{$ends[0]}->{$ends[1]}->{$ends[2]};
+            }
+            break;
+
+          case 2:
+            if (isset($more->{$ends[0]}->{$ends[1]})) {
+              $join[] = $more->{$ends[0]}->{$ends[1]};
+            }
+            break;
+
+          case 1:
+          default:
+            if (isset($more->{$ends[0]})) {
+              $join[] = $more->{$ends[0]};
+            }
+        }
+      }
+      $value = implode(", ", $join);
+    }
+
+    return $value;
+  }
+
+  /**
+   * [formatFieldValue description]
+   * @return [type] [description]
+   */
+  public function formatFieldValue($value, $field, $info) {
+
+    // Nothing special needed for the key.
+    if ($field == "key") {
+      return $value;
+    }
+
+    $parts = explode(".", $field);
+    $fieldInfo = $info->info($parts[1]);
+
+    switch ($fieldInfo->schema->type) {
+      case "datetime":
+      case "date":
+        $time = strtotime($value);
+        $date = "";
+        if ($time) {
+          $date = format_date($time, 'custom', "F d, Y");
+        }
+        $value = $date;
+        break;
+
+      case "number":
+      case "progress":
+        $value = (int) check_plain($value);
+        break;
+
+      case "account":
+      case "user":
+      case "project":
+        if ($parts[count($parts) - 1] == "48x48") {
+          $value = "<img src=\"" . $value . "\" alt=\"\" title=\"\">";
+        }
+        else {
+          $value = check_plain($value);
+        }
+        break;
+
+      case "string":
+      case "issuetype":
+      case "status":
+      case "resolution":
+      case "priority":
+      default:
+        $value = check_plain($value);
+    }
+
+    return $value;
+
   }
 
   /**

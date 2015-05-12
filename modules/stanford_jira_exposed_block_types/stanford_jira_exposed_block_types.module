@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Stanford Jira Exposed Block Types feature.
+ */
+
+include_once 'stanford_jira_exposed_block_types.features.inc';
