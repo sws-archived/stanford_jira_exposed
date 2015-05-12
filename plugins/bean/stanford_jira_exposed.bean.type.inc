@@ -128,36 +128,77 @@ class StanfordJiraExposedBean extends BeanPlugin {
         }
 
         // Use the connector like this so it can use it's built in cache.
-        $fieldInfo = $fieldConnector->info($field);
+        $fieldInfo = $fieldConnector->info($i);
 
         // Some fields are "special" and are not in the schema.
         if (isset($fieldInfo->schema->type)) {
           switch($fieldInfo->schema->type) {
+
             case "array":
+            case "version":
               $data = array();
               foreach ($issue->fields->{$field} as $item) {
-                $data[] = $item->name;
+                if (is_string(($item))) {
+                  $data[] = check_plain($item);
+                }
+                else {
+                  $data[] = check_plain($item->name);
+                }
               }
               $row[] = implode(", ", $data);
               break;
 
             case "datetime":
+            case "date":
               $time = strtotime($issue->fields->{$field});
-              $date = format_date($time, 'custom', "F d, Y");
+              $date = "";
+              if ($time) {
+                $date = format_date($time, 'custom', "F d, Y");
+              }
               $row[] = $date;
               break;
 
+            //  case "timetracking":
+            //  break;
+
             case "issuetype":
             case "status":
-              $row[] = check_plain($issue->fields->{$field}->name);
+            case "resolution":
+            case "priority":
+              if (!empty($issue->fields->{$field}->name)) {
+                $row[] = check_plain($issue->fields->{$field}->name);
+              }
+              break;
+
+            case "account":
+            case "user":
+              if (isset($issue->fields->{$field}->displayName)) {
+                $row[] = check_plain($issue->fields->{$field}->displayName);
+              }
+              else {
+                $row[] = t("Annonymous");
+              }
+              break;
+
+            case "number":
+              $row[] = (int) check_plain($issue->fields->{$field}->{$field});
+              break;
+
+            case "progress":
+              $row[] = (int) check_plain($issue->fields->{$field}->progress);
+              break;
+
+            case "project":
+              $row[] = check_plain($issue->fields->{$field}->key);
               break;
 
             case "string":
             default:
               $row[] = check_plain($issue->fields->{$field});
+
           }
         }
-        // Special case for the issue key
+        // Special case for the issue key.
         else if($fieldInfo->id == "issuekey") {
           $row[] = $issue->key;
         }
