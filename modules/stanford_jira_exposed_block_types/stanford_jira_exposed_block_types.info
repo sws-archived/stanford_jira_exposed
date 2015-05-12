@@ -22,6 +22,7 @@ features[field_base][] = field_jira_field_options
 features[field_base][] = field_jira_fields
 features[field_base][] = field_jira_jql
 features[field_base][] = field_jira_layout
+features[field_group][] = group_jira_admins|bean|stanford_jira|form
 features[field_group][] = group_jira_content|bean|stanford_jira|form
 features[field_group][] = group_jira|bean|stanford_jira|form
 features[field_instance][] = bean-stanford_jira-field_jira_body_above
