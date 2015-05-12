@@ -15,6 +15,8 @@ abstract class EndpointAbstract implements EndpointInterface {
   protected $password = "";
   // The Connector Object
   protected $connector;
+  // Localized runtime cache.
+  protected $cache;
 
   // ///////////////////////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////////////////
@@ -39,15 +41,31 @@ abstract class EndpointAbstract implements EndpointInterface {
     $connector = $this->getConnector();
 
     // @todo: Cache stuff here.
+    $defaults = array(
+      'user' => $this->getUsername(),
+      'pass' => $this->getPassword(),
+      'path' => $this->getPath()
+    );
+
+    // Create a settings obj.
+    $settings = array_merge($defaults, $options);
+    $hash = md5(serialize($settings));
+
+    $cache = $this->getCache($hash);
+    if ($cache) {
+      return $cache;
+    }
 
     // Fetch them.
-    $ch = jira_rest_get_curl_resource($this->getUsername(), $this->getPassword(), $this->getPath());
+    $ch = jira_rest_get_curl_resource($settings['user'], $settings['pass'], $settings['path']);
     try {
       $results = jira_rest_curl_execute($ch);
     }
     catch(JiraRestExpection $e) {
       return FALSE;
     }
+
+    $this->setCache($hash, $results);
 
     // Save into categories and return.
     return $results;
@@ -105,8 +123,33 @@ abstract class EndpointAbstract implements EndpointInterface {
     $this->username = $user;
   }
 
+  /**
+   * [getConnector description]
+   * @return [type] [description]
+   */
   public function getConnector() {
     return $this->connector;
+  }
+
+  /**
+   * [setCache description]
+   * @param [type] $hash   [description]
+   * @param [type] $values [description]
+   */
+  public function setCache($hash, $values) {
+    $this->cache[$hash] = $values;
+  }
+
+  /**
+   * [getCache description]
+   * @param  [type] $hash [description]
+   * @return [type]       [description]
+   */
+  public function getCache($hash) {
+    if (isset($this->cache[$hash])) {
+      return $this->cache[$hash];
+    }
+    return FALSE;
   }
 
 }

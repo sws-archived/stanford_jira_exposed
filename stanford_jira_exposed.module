@@ -127,3 +127,68 @@ function stanford_jira_exposed_sort_by_category_key(&$array, $order) {
 
 }
 
+
+/**
+ * Implements hook_form_alter().
+ */
+function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
+
+  if (!isset($form['#bundle']) || $form['#bundle'] !== "stanford_jira") {
+    return;
+  }
+
+  $options = array();
+  $defaults = array();
+
+  // Get available fields from Jira.
+  $connector = new \StanfordJiraExposed\JiraConnector();
+  $fields = $connector->restAPI('fields')->fetch();
+  foreach ($fields as $k => $v) {
+    $options[$v->id] = $v->name;
+  }
+  asort($options);
+
+  // Hide the textfield.
+  $form['field_jira_field_storage']['#access'] = FALSE;
+
+  // Get default settings.
+  $defaults = unserialize($form['field_jira_field_storage'][LANGUAGE_NONE][0]['value']['#default_value']);
+
+  // Create a field for the jira field checkboxes.
+  $form['jira_fields'] = array(
+    '#type' => "checkboxes",
+    '#title' => t("Field options"),
+    '#description' => t("Check the fields you wish to display on this block. If none are selected a sensible set of defaults will be used."),
+    '#options' => $options,
+    '#default_value' => $defaults,
+    '#weight' => 10,
+    '#states' => array(
+      'invisible' => array(
+        '#edit-field-jira-layout-und' => array('value' => 'agile'),
+      ),
+    )
+  );
+
+  // Add new field to appropriate groups.
+  $form['#groups']['group_jira']->children[] = 'jira_fields';
+  $form['#group_children']['jira_fields'] = "group_jira";
+
+  // Add a submit hook to save the data.
+  $form['#submit'][] = "stanford_jira_exposed_move_field_settings";
+
+}
+
+/**
+ * [stanford_jira_exposed_move_field_settings description]
+ * @param  [type] $form       [description]
+ * @param  [type] $form_state [description]
+ * @return [type]             [description]
+ */
+function stanford_jira_exposed_move_field_settings($form, &$form_state) {
+
+  $values = $form_state['values'];
+  $fields = serialize($values['jira_fields']);
+  form_set_value($form['field_jira_field_storage'][LANGUAGE_NONE][0]['value'], $fields, $form_state);
+
+}
+

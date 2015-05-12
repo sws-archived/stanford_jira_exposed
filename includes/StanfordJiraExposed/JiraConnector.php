@@ -7,6 +7,7 @@ namespace StanfordJiraExposed;
 use StanfordJiraExposed\Endpoints\StatusCategoryEndpoint;
 use StanfordJiraExposed\Endpoints\StatusTypeEndpoint;
 use StanfordJiraExposed\Endpoints\SearchIssuesEndpoint;
+use StanfordJiraExposed\Endpoints\FieldsEndpoint;
 
 class JiraConnector {
 
@@ -85,36 +86,46 @@ class JiraConnector {
 
 
   /**
-   * Fetches
+   * Fetches API stuffs.
    */
 
   public function restAPI($type) {
     switch ($type) {
 
-    case "statuscategory":
-    case "statuscategories":
-      $ep = new StatusCategoryEndpoint($this);
-      break;
+      case "statuscategory":
+      case "statuscategories":
+        $ep = new StatusCategoryEndpoint($this);
+        break;
 
-    case "statustype":
-    case "statustypes":
-      $ep = new StatusTypeEndpoint($this);
-      break;
+      case "statustype":
+      case "statustypes":
+        $ep = new StatusTypeEndpoint($this);
+        break;
 
-    case "searchissues":
-      $ep = new SearchIssuesEndpoint($this);
-      break;
+      case "searchissues":
+        $ep = new SearchIssuesEndpoint($this);
+        break;
+
+      case "fields":
+      case "field":
+        $ep = new FieldsEndpoint($this);
+        break;
 
       default:
         throw new Exception("Error Processing Request");
-        break;
+      break;
+
     }
 
     return $ep;
   }
 
+  /**
+   * [restGreenhopper description]
+   * @return [type] [description]
+   */
   public function restGreenhopper() {
-
+    // Nothing here yet.
   }
 
 

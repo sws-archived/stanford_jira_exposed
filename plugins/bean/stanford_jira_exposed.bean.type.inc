@@ -9,6 +9,8 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public $content = "";
   // Storage for wrapped bean.
   public $wrapped = NULL;
+  // Conntector
+  public $connector;
 
   /**
    * Overrides the view method.
@@ -52,7 +54,10 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function themeTable() {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
-    $issues = stanford_jira_exposed_get_issues($jql);
+    $fields = unserialize($bean->field_jira_field_storage->value());
+
+    $connector = $this->getConnector();
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
 
     // If after all of that just return the original content.
     if (!$issues) {
@@ -62,15 +67,8 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
     // Setting up the table variables.
     $vars = array();
-    $vars['header'] = array(t("Type"), t("Key"), t("Title"), t("Created"));
-    $vars['rows'] = array();
-
-    // Loop through the issues and pull out what we want.
-    foreach ($issues as $k => $issue) {
-      $created = strtotime($issue->fields->created);
-      $date = format_date($created, "custom", "M d, Y");
-      $vars['rows'][] = array($issue->fields->issuetype->name, $issue->key, $issue->fields->summary, $date);
-    }
+    $vars['header'] = $this->formatTableHeadings($fields);
+    $vars['rows'] = $this->formatTableFields($issues, $fields);
 
     // Change them into a renderable array.
     $content = array();
@@ -84,6 +82,91 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
     // Return for rendering.
     return $content;
+  }
+
+  /**
+   * [formatTableHeadings description]
+   * @param  [type] $fields [description]
+   * @return [type]         [description]
+   */
+  public function formatTableHeadings($fields) {
+    $rows = array();
+    $connector = $this->getConnector();
+    $fieldConnector = $connector->restAPI("fields");
+
+    // Loop through the fields and get the title.
+    foreach ($fields as $i => $field) {
+      // Skip unchecked fields.
+      if (empty($field)) {
+        continue;
+      }
+
+      // Use the connector like this so it can use it's built in cache.
+      $fieldInfo = $fieldConnector->info($field);
+      $rows[] = check_plain($fieldInfo->name);
+    }
+
+    return $rows;
+  }
+
+  /**
+   * [formatTableFields description]
+   * @return [type] [description]
+   */
+  public function formatTableFields($issues, $fields) {
+    $rows = array();
+    $connector = $this->getConnector();
+    $fieldConnector = $connector->restAPI("fields");
+
+    // Loop through the issues and pull out what we want.
+    foreach ($issues as $k => $issue) {
+      $row = array();
+      foreach ($fields as $i => $field) {
+        // Skip unchecked fields.
+        if (empty($field)) {
+          continue;
+        }
+
+        // Use the connector like this so it can use it's built in cache.
+        $fieldInfo = $fieldConnector->info($field);
+
+        // Some fields are "special" and are not in the schema.
+        if (isset($fieldInfo->schema->type)) {
+          switch($fieldInfo->schema->type) {
+            case "array":
+              $data = array();
+              foreach ($issue->fields->{$field} as $item) {
+                $data[] = $item->name;
+              }
+              $row[] = implode(", ", $data);
+              break;
+
+            case "datetime":
+              $time = strtotime($issue->fields->{$field});
+              $date = format_date($time, 'custom', "F d, Y");
+              $row[] = $date;
+              break;
+
+            case "issuetype":
+            case "status":
+              $row[] = check_plain($issue->fields->{$field}->name);
+              break;
+
+            case "string":
+            default:
+              $row[] = check_plain($issue->fields->{$field});
+          }
+        }
+        // Special case for the issue key
+        else if($fieldInfo->id == "issuekey") {
+          $row[] = $issue->key;
+        }
+
+      }
+      $rows[] = $row;
+    }
+
+    return $rows;
   }
 
   /**
@@ -192,6 +275,25 @@ class StanfordJiraExposedBean extends BeanPlugin {
     return $this->wrapped;
   }
 
+  /**
+   * [getConnector description]
+   * @return [type] [description]
+   */
+  public function getConnector() {
+    if (empty($this->connector)) {
+      $this->connector = new \StanfordJiraExposed\JiraConnector();
+    }
+    return $this->connector;
+  }
+
+  /**
+   * [setConnector description]
+   * @param [type] $con [description]
+   */
+  public function setConnector($con) {
+    $this->connector = $con;
+  }
+
 
   /**
    * ***************************************************************************
@@ -207,7 +309,7 @@ class StanfordJiraExposedBean extends BeanPlugin {
    */
   public function sortIssuesByStatus($items, $types) {
     // JiraRestConnector.
-    $connector = new \StanfordJiraExposed\JiraConnector();
+    $connector = $this->getConnector();
     // For weighting.
     $statusCategories = $connector->restAPI("statuscategories")->fetch();
 
@@ -264,7 +366,7 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function getCategorySortOrder() {
     $order = array();
     // JiraRestConnector.
-    $connector = new \StanfordJiraExposed\JiraConnector();
+    $connector = $this->getConnector();
     // For weighting.
     $categories = $connector->restAPI("statuscategories")->fetch();
     foreach ($categories as $i => $cat) {
