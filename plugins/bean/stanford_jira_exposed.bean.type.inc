@@ -265,8 +265,17 @@ class StanfordJiraExposedBean extends BeanPlugin {
         }
         break;
 
-      case "string":
       case "issuetype":
+        if ($parts[count($parts) - 1] == "iconUrl") {
+          $value = "<img src=\"" . $value . "\" alt=\"\" title=\"\">";
+        }
+        else {
+          $value = check_plain($value);
+        }
+        break;
+
+
+      case "string":
       case "status":
       case "resolution":
       case "priority":
