@@ -212,9 +212,23 @@ class StanfordJiraExposedBean extends BeanPlugin {
             break;
 
           case 1:
-          default:
             if (isset($more->{$ends[0]})) {
               $join[] = $more->{$ends[0]};
+            }
+            break;
+
+          default:
+            if (is_scalar($more)) {
+              $join[] = check_plain($more);
+            }
+            else if (isset($more->name)) {
+              $join[] = check_plain($more->name);
+            }
+            else if (isset($more->id)) {
+              $join[] = check_plain($more->id);
+            }
+            else if (isset($more->key)) {
+              $join[] = check_plain($more->key);
             }
         }
       }
@@ -340,12 +354,18 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
     $original_content = $this->getContent();
     $values = array_pop($original_content['bean']);
-    $content["field_jira_body_above"] = $values['field_jira_body_above'];
-    $content["field_jira_body_above"]["#weight"] = -100;
-    $content["field_jira_body_above"]["#label_display"] = "hidden";
-    $content["field_jira_body_below"] = $values['field_jira_body_below'];
-    $content["field_jira_body_below"]["#weight"] = 100;
-    $content["field_jira_body_below"]["#label_display"] = "hidden";
+
+    if (isset($values['field_jira_body_above'])) {
+      $content["field_jira_body_above"] = $values['field_jira_body_above'];
+      $content["field_jira_body_above"]["#weight"] = -100;
+      $content["field_jira_body_above"]["#label_display"] = "hidden";
+    }
+
+    if (isset($values['field_jira_body_below'])) {
+      $content["field_jira_body_below"] = $values['field_jira_body_below'];
+      $content["field_jira_body_below"]["#weight"] = 100;
+      $content["field_jira_body_below"]["#label_display"] = "hidden";
+    }
 
   }
 
