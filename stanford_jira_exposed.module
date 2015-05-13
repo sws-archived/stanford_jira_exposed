@@ -126,3 +126,23 @@ function stanford_jira_exposed_sort_by_category_key(&$array, $order) {
   }
 
 }
+
+/**
+ * Implements hook_form_alter().
+ */
+function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
+
+  // Die if not on the jira bean.
+  if (!isset($form['#bundle']) || $form['#bundle'] !== "stanford_jira") {
+    return;
+  }
+
+  $form['field_jira_fields']["#states"] = array(
+    'visible' => array(
+      '#edit-field-jira-layout-und' => array('value' => "table"),
+    ),
+  );
+
+}
+
+
