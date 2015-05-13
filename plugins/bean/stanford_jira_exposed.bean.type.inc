@@ -64,6 +64,10 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $connector = $this->getConnector();
     $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
 
+    if (is_array($issues) && empty($issues)) {
+      return "<p>No items found.</p>";
+    }
+
     // If after all of that just return the original content.
     if (!$issues) {
       drupal_set_message("Could not retreive issues from Jira", "error");
@@ -310,6 +314,9 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $connector = new \StanfordJiraExposed\JiraConnector();
     $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
 
+    if (is_array($issues) && empty($issues)) {
+      return "<p>No items found.</p>";
+    }
     // If after all of that just return the original content.
     if (!$issues) {
       drupal_set_message("Could not retreive issues from Jira", "error");
