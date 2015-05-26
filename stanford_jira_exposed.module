@@ -141,15 +141,19 @@ function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
   // Hide/show fields select.
   $form['field_jira_fields']["#states"] = array(
     'visible' => array(
-      '#edit-field-jira-layout-und' => array('value' => "table"),
-      '#edit-field-jira-layout-und' => array('value' => "release"),
+      '#edit-field-jira-layout-und' => array(
+        array('value' => "table"),
+        array('value' => "release"),
+      ),
     ),
   );
 
   $form['field_jira_jql']["#states"] = array(
     'visible' => array(
-      '#edit-field-jira-layout-und' => array('value' => "table"),
-      '#edit-field-jira-layout-und' => array('value' => "release"),
+      '#edit-field-jira-layout-und' => array(
+        array('value' => "table"),
+        array('value' => "release"),
+      ),
     ),
   );
 
