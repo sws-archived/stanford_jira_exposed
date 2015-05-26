@@ -4,10 +4,22 @@
  */
 
 namespace StanfordJiraExposed;
-use StanfordJiraExposed\Endpoints\StatusCategoryEndpoint;
-use StanfordJiraExposed\Endpoints\StatusTypeEndpoint;
-use StanfordJiraExposed\Endpoints\SearchIssuesEndpoint;
-use StanfordJiraExposed\Endpoints\FieldsEndpoint;
+// Rest API.
+use StanfordJiraExposed\Endpoints\Rest\StatusCategoryEndpoint;
+use StanfordJiraExposed\Endpoints\Rest\StatusTypeEndpoint;
+use StanfordJiraExposed\Endpoints\Rest\SearchIssuesEndpoint;
+use StanfordJiraExposed\Endpoints\Rest\FieldsEndpoint;
+use StanfordJiraExposed\Endpoints\Rest\IssueEndpoint;
+use StanfordJiraExposed\Endpoints\Rest\VersionEndpoint;
+// Greenhopper API.
+use StanfordJiraExposed\Endpoints\Greenhopper\ProjectListEndpoint;
+use StanfordJiraExposed\Endpoints\Greenhopper\RapidviewEndpoint;
+use StanfordJiraExposed\Endpoints\Greenhopper\RapidviewsEndpoint;
+use StanfordJiraExposed\Endpoints\Greenhopper\SprintEndpoint;
+use StanfordJiraExposed\Endpoints\Greenhopper\XBoardEndpoint;
+use StanfordJiraExposed\Endpoints\Greenhopper\VersionsEndpoint;
+
+
 
 class JiraConnector {
 
@@ -90,25 +102,77 @@ class JiraConnector {
    */
 
   public function restAPI($type) {
+    $base = "/rest/api/latest";
+    $ep = FALSE;
+
     switch ($type) {
 
       case "statuscategory":
       case "statuscategories":
-        $ep = new StatusCategoryEndpoint($this);
+        $ep = new StatusCategoryEndpoint($this, $base);
         break;
 
       case "statustype":
       case "statustypes":
-        $ep = new StatusTypeEndpoint($this);
+        $ep = new StatusTypeEndpoint($this, $base);
         break;
 
       case "searchissues":
-        $ep = new SearchIssuesEndpoint($this);
+        $ep = new SearchIssuesEndpoint($this, $base);
         break;
 
       case "fields":
       case "field":
-        $ep = new FieldsEndpoint($this);
+        $ep = new FieldsEndpoint($this, $base);
+        break;
+
+      case "issue":
+        $ep = new IssueEndpoint($this, $base);
+        break;
+
+      case "version":
+        $ep = new VersionEndpoint($this, $base);
+        break;
+
+      default:
+        throw new \Exception("Error Processing Request");
+      break;
+
+    }
+
+    return $ep;
+  }
+
+
+  /**
+   * Fetches API stuffs.
+   */
+
+  public function greenhopperAPI($type) {
+    $base = "/rest/greenhopper/1.0";
+    $ep = FALSE;
+
+    switch ($type) {
+
+      case "rapidview":
+        $ep = new RapidviewEndpoint($this, $base);
+        break;
+
+
+      case "rapidviews":
+        $ep = new RapidviewsEndpoint($this, $base);
+        break;
+
+      case "sprint":
+        $ep = new SprintEndpoint($this, $base);
+        break;
+
+      case "xboard":
+        $ep = new XboardEndpoint($this, $base);
+        break;
+
+      case "versions":
+        $ep = new VersionsEndpoint($this, $base);
         break;
 
       default:
@@ -118,14 +182,6 @@ class JiraConnector {
     }
 
     return $ep;
-  }
-
-  /**
-   * [restGreenhopper description]
-   * @return [type] [description]
-   */
-  public function restGreenhopper() {
-    // Nothing here yet.
   }
 
 

@@ -5,6 +5,7 @@
 
 // Make sure this is loaded.
 require_once "includes/autoloader.php";
+use \StanfordJiraExposed\JiraConnector;
 
 /**
  * Implements hook_help().
@@ -137,11 +138,88 @@ function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
     return;
   }
 
+  // Hide/show fields select.
   $form['field_jira_fields']["#states"] = array(
     'visible' => array(
       '#edit-field-jira-layout-und' => array('value' => "table"),
+      '#edit-field-jira-layout-und' => array('value' => "release"),
     ),
   );
+
+  $form['field_jira_jql']["#states"] = array(
+    'visible' => array(
+      '#edit-field-jira-layout-und' => array('value' => "table"),
+      '#edit-field-jira-layout-und' => array('value' => "release"),
+    ),
+  );
+
+
+  // Get a list of all active sprints.
+  $jira = new JiraConnector();
+  $sprints = $jira->greenhopperAPI("sprint")->picker();
+  $rapid = $jira->greenhopperAPI("rapidview")->fetch();
+
+  $options = array();
+  foreach ($sprints->allMatches as $k => $v) {
+    $options[$v->id] = check_plain($v->name);
+  }
+
+  $form["field_jira_sprints"]['#access'] = FALSE;
+  $form["field_jira_rapidview"]['#access'] = FALSE;
+
+  // Add select field.
+  $form["field_jira_sprint_picker"] = array(
+    '#type' => "select",
+    '#title' => $form['field_jira_sprints'][LANGUAGE_NONE]['#title'],
+    '#description' => $form['field_jira_sprints'][LANGUAGE_NONE]['#description'],
+    '#options' => $options,
+    '#weight' => $form['field_jira_sprints']['#weight'],
+    '#default_value' => $form['field_jira_sprints'][LANGUAGE_NONE][0]['value'],
+    '#states' => array(
+      'visible' => array(
+        '#edit-field-jira-layout-und' => array('value' => "agile"),
+      ),
+    )
+  );
+
+  $form['#group_children']['field_jira_sprint_picker'] = "group_jira";
+  $form['#validate'][] = "stanford_jira_exposed_form_bean_form_alter_validate";
+
+}
+
+/**
+ * [stanford_jira_exposed_form_bean_form_alter_validate description]
+ * @param  [type] $form       [description]
+ * @param  [type] $form_state [description]
+ * @return [type]             [description]
+ */
+function stanford_jira_exposed_form_bean_form_alter_validate(&$form, &$form_state) {
+  // Patch the value from the picker to the textarea.
+  $sprintId = $form_state['values']['field_jira_sprint_picker'];
+  form_set_value($form['field_jira_sprints'][LANGUAGE_NONE][0]['value'], $sprintId, $form_state);
+
+  // Get and set the rapid view id.
+  $jira = new JiraConnector();
+  $sprints = $jira->greenhopperAPI("sprint")->picker();
+  $rapid = $jira->greenhopperAPI("rapidview")->fetch();
+  $boardName = "";
+  $rapidId = 0;
+
+  foreach ($sprints->allMatches as $k => $v) {
+    if ($v->id == $sprintId) {
+      $boardName = $v->boardName;
+      break;
+    }
+  }
+
+  foreach ($rapid->views as $k => $v) {
+    if ($v->name == $boardName) {
+      $rapidId = $v->id;
+      break;
+    }
+  }
+
+  form_set_value($form['field_jira_rapidview'][LANGUAGE_NONE][0]['value'], $rapidId, $form_state);
 
 }
 

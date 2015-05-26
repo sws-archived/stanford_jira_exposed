@@ -3,7 +3,8 @@
  * @file
  */
 
-namespace StanfordJiraExposed\Endpoints;
+namespace StanfordJiraExposed\Endpoints\Rest;
+use StanfordJiraExposed\Endpoints\EndpointAbstract;
 
 class FieldsEndpoint extends EndpointAbstract {
 

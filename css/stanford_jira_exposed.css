@@ -110,3 +110,9 @@
   vertical-align: top;
   margin: 0 0 0 0.3em;
 }
+
+/* line 104, stanford_jira_exposed.scss */
+.release-table {
+  margin-bottom: 3em;
+  width: 100%;
+}

@@ -7,6 +7,8 @@ namespace StanfordJiraExposed\Endpoints;
 
 abstract class EndpointAbstract implements EndpointInterface {
 
+  // Api base path.
+  protected $base = "";
   // Api endpoint base path
   protected $path = "";
   // Jira Username.
@@ -25,7 +27,8 @@ abstract class EndpointAbstract implements EndpointInterface {
    * [__construct description]
    * @param JiraConnector $connector [description]
    */
-  public function __construct(\StanfordJiraExposed\JiraConnector $connector) {
+  public function __construct(\StanfordJiraExposed\JiraConnector $connector, $base) {
+    $this->base = $base;
     $this->connector = $connector;
   }
 
@@ -44,7 +47,8 @@ abstract class EndpointAbstract implements EndpointInterface {
     $defaults = array(
       'user' => $this->getUsername(),
       'pass' => $this->getPassword(),
-      'path' => $this->getPath()
+      'path' => $this->getPath(),
+      'method' => "GET",
     );
 
     // Create a settings obj.
@@ -57,7 +61,7 @@ abstract class EndpointAbstract implements EndpointInterface {
     }
 
     // Fetch them.
-    $ch = jira_rest_get_curl_resource($settings['user'], $settings['pass'], $settings['path']);
+    $ch = $this->get_curl_resource($settings['user'], $settings['pass'], $settings['path'], $settings['method']);
     try {
       $results = jira_rest_curl_execute($ch);
     }
@@ -150,6 +154,42 @@ abstract class EndpointAbstract implements EndpointInterface {
       return $this->cache[$hash];
     }
     return FALSE;
+  }
+
+  /**
+   * [get_base description]
+   * @return [type] [description]
+   */
+  public function get_base() {
+    return $this->base;
+  }
+
+  /**
+   * [set_base description]
+   * @param [type] $base [description]
+   */
+  public function set_base($base) {
+    $this->base = $base;
+  }
+
+
+  /**
+   * [get_curl_resource description]
+   * @return [type] [description]
+   */
+  public function get_curl_resource($username, $password, $url, $method = "GET") {
+
+    $jira_url = variable_get('jira_rest_jirainstanceurl', 'https://localhost:8443') . $this->get_base();
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $jira_url . $url);
+    curl_setopt($ch, CURLOPT_USERPWD, $username . ':' . $password);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+
+    return $ch;
   }
 
 }

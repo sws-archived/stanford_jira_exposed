@@ -47,6 +47,10 @@ class StanfordJiraExposedBean extends BeanPlugin {
   // THEME FUNCTIONS
   // ---------------------------------------------------------------------------
 
+  // ***************************************************************************
+  // Theme Table
+  // ***************************************************************************
+
   /**
    * [themeTable description]
    * @return [type] [description]
@@ -54,7 +58,6 @@ class StanfordJiraExposedBean extends BeanPlugin {
   public function themeTable() {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
-    // $fields = unserialize($bean->field_jira_field_storage->value());
     $fields = array();
     $fcs = $bean->field_jira_fields->value();
     foreach ($fcs as $i => $fc_item) {
@@ -92,6 +95,249 @@ class StanfordJiraExposedBean extends BeanPlugin {
     // Return for rendering.
     return $content;
   }
+
+
+  // ***************************************************************************
+  // Theme Agile
+  // ***************************************************************************
+
+  /**
+   * [theme_agile description]
+   * @return [type] [description]
+   */
+  public function themeAgile() {
+    $bean = $this->getWrapped();
+    $jql = $bean->field_jira_jql->value();
+    $sprintId = $bean->field_jira_sprints->value();
+    $rapidviewId = $bean->field_jira_rapidview->value();
+    $sprintInfo = new stdClass();
+    $content = array();
+
+    $connector = new \StanfordJiraExposed\JiraConnector();
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+    $xboard = $connector->greenhopperApi("xboard")->work("allData", array("rapidViewId" => $rapidviewId));
+
+    // @Todo: check for valid response.
+    $columns = $xboard->columnsData->columns;
+    $sprints = $xboard->sprintsData->sprints;
+    $issues = $xboard->issuesData->issues;
+
+
+    // Get the sprint info.
+    foreach ($sprints as $k => $sprint) {
+      if ($sprint->id == $sprintId) {
+        $sprintInfo = $sprint;
+        break;
+      }
+    }
+
+    $content["sprint"]["#markup"] = "<div class=\"sprint-info\">";
+    $content["sprint"]["#markup"] .= "<h3 class=\"sprint-name\">" . $sprintInfo->name . "</h3> ";
+    $content["sprint"]["#markup"] .= "<span class=\"sprint-start\"><b>Start date:</b> " . $sprintInfo->startDate . "</span> ";
+    $content["sprint"]["#markup"] .= "<span class=\"sprint-end\"><b>End date:</b> " . $sprintInfo->endDate . "</span> ";
+    $content["sprint"]["#markup"] .= "</div>";
+    $content["sprint"]["#weight"] = -10;
+
+    // If there are no issues then we can just return.
+    if (!is_array($issues) || empty($issues)) {
+      $content["nada"]['#markup'] = "<h2>No items found.</h2>";
+      return $content;
+    }
+
+    // Get the agile category information.
+    // -------------------------------------------------------------------------
+
+    $headings = array();
+    foreach ($columns as $k => $column) {
+      $headings[] = $column->name;
+    }
+
+    // Agile header contents.
+    $content['agileheader'] = array(
+      '#theme' => "agileheader",
+      '#items' => $headings,
+      '#weight' => -1,
+    );
+
+    // Agile body contents. (issues)
+    // -------------------------------------------------------------------------
+
+    // Fill out the columns to match the headers.
+    $groups = array_fill(0, count($headings), array());
+
+    // Add the items to each column.
+    foreach ($issues as $k => $issue) {
+      foreach ($columns as $i => $column) {
+        if (in_array($issue->status->id, $column->statusIds)) {
+          $fields = "fixVersions,issuetype,summary,components,status,priority";
+          $groups[$i][] = $connector->restApi("issue")->issue($issue->id, $fields);
+          break;
+        }
+      }
+    }
+
+    $content['agilebody'] = array(
+      '#theme' => "agilebody",
+      '#groups' => $groups,
+    );
+
+    // Add the bodies.
+    $this->addBodies($content);
+
+    // Add the CSS
+    $content['#attached']['css'][] = drupal_get_path("module" , "stanford_jira_exposed") . "/css/stanford_jira_exposed.css";
+
+    // Return for rendering.
+    return $content;
+  }
+
+
+  // ***************************************************************************
+  // Release Theme
+  // ***************************************************************************
+
+  /**
+   * [themeRelease description]
+   * @return [type] [description]
+   */
+  public function themeRelease() {
+    $content = array();
+
+    $bean = $this->getWrapped();
+    $jql = $bean->field_jira_jql->value();
+    $fields = array();
+    $fcs = $bean->field_jira_fields->value();
+    foreach ($fcs as $i => $fc_item) {
+      $fields[$fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"]] = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+    }
+
+    // Get Issues and sort them.
+    $connector = $this->getConnector();
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+    $groups = $this->groupIssuesByFixVersion($issues);
+    $weight = 0;
+
+    // Create tables out of each group of issues.
+    foreach ($groups as $groupId => $group) {
+
+      // No empty groups please.
+      if (empty($group["issues"])) {
+        continue;
+      }
+
+      // Version information headings.
+      $content[$groupId . "-heading"]["#markup"] = "<h3 class=\"release-name\">" . $group['info']->name . "</h3>";
+
+      // Start Date information.
+      if (isset($group['info']->startDate)) {
+        $content[$groupId . "-heading"]["#markup"] .= "<span class=\"release-start-date\"><b>" . t("Start date") . "</b>: " . $group['info']->startDate . "</span>";
+      }
+
+      // Release Date information.
+      if (isset($group['info']->releaseDate)) {
+        $content[$groupId . "-heading"]["#markup"] .= "<span class=\"release-end-date\"><b>" . t("End date") . "</b>: " . $group['info']->releaseDate . "</span>";
+      }
+
+      // Release information.
+      if (isset($group['info']->description)) {
+        $content[$groupId . "-heading"]["#markup"] .= "<p class=\"release-description\"><b>" . t("Description") . "</b>: " . $group['info']->description . "</p>";
+      }
+
+      // Set the weight.
+      $content[$groupId . "-heading"]["#weight"] = $weight++;
+
+      // Setting up the table variables.
+      $vars = array();
+      $vars['header'] = $this->formatTableHeadings($fields);
+      $vars['rows'] = $this->formatTableFields($group["issues"], $fields);
+
+      // Change them into a renderable array.
+      $content[$groupId] = array();
+      $content[$groupId]['#theme'] = "table";
+      $content[$groupId]['#header'] = $vars['header'];
+      $content[$groupId]['#rows'] = $vars['rows'];
+      $content[$groupId]['#attributes'] = array("class" => array("release-table"));
+      $content[$groupId]["#weight"] = $weight++;
+
+    }
+
+    // Add the bodies.
+    $this->addBodies($content);
+    // Add the CSS
+    $content['#attached']['css'][] = drupal_get_path("module" , "stanford_jira_exposed") . "/css/stanford_jira_exposed.css";
+    return $content;
+  }
+
+
+
+  // GETTERS AND SETTERS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Why this no haz already?
+   * @return object BEAN
+   */
+  public function getBean() {
+    return $this->bean;
+  }
+
+  /**
+   * [setContent description]
+   * @param mixed $content [description]
+   */
+  public function setContent($content = "") {
+    $this->content = $content;
+  }
+
+  /**
+   * Gives back $this->content
+   * @return [type] [description]
+   */
+  public function getContent() {
+    return $this->content;
+  }
+
+  /**
+   * [setWrapped description]
+   * @param [type] $wrap [description]
+   */
+  public function setWrapped($wrap) {
+    $this->wrapped = $wrap;
+  }
+
+  /**
+   * [getWrapped description]
+   * @return [type] [description]
+   */
+  public function getWrapped() {
+    return $this->wrapped;
+  }
+
+  /**
+   * [getConnector description]
+   * @return [type] [description]
+   */
+  public function getConnector() {
+    if (empty($this->connector)) {
+      $this->connector = new \StanfordJiraExposed\JiraConnector();
+    }
+    return $this->connector;
+  }
+
+  /**
+   * [setConnector description]
+   * @param [type] $con [description]
+   */
+  public function setConnector($con) {
+    $this->connector = $con;
+  }
+
+
+  /**
+   * ***************************************************************************
+   * UTILITY FUNCTIONS
+   * ***************************************************************************
+   */
 
   /**
    * [formatTableHeadings description]
@@ -305,52 +551,40 @@ class StanfordJiraExposedBean extends BeanPlugin {
   }
 
   /**
-   * [theme_agile description]
-   * @return [type] [description]
+   * [groupIssuesByFixVersion description]
+   * @param  array  $issues [description]
+   * @return [type]         [description]
    */
-  public function themeAgile() {
-    $bean = $this->getWrapped();
-    $jql = $bean->field_jira_jql->value();
-    $connector = new \StanfordJiraExposed\JiraConnector();
-    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+  public function groupIssuesByFixVersion($issues = array()) {
+    $groups = array();
+    $groups['none'] = array('info' => new stdClass());
+    $groups['none']['info']->name = t("None");
+    $groups['none']['issues'] = array();
+    $connector = $this->getConnector();
 
-    if (is_array($issues) && empty($issues)) {
-      return "<p>No items found.</p>";
+    $order = array();
+
+    foreach ($issues as $k => $issue) {
+
+      // If not in a fix issue put into the none pile.
+      if (!isset($issue->fields->fixVersions) || !is_array($issue->fields->fixVersions)) {
+        $groups['none']['issues'][] = $issue;
+        continue;
+      }
+
+      $versions = $issue->fields->fixVersions;
+      foreach ($versions as $i => $version) {
+        $groups["v" . $version->id]['info'] = $connector->restApi("version")->version($version->id);
+        $groups["v" . $version->id]['issues'][] = $issue;
+        $order[$version->name] = "v" . $version->id;
+      }
     }
-    // If after all of that just return the original content.
-    if (!$issues) {
-      drupal_set_message("Could not retreive issues from Jira", "error");
-      return $this->getContent();
-    }
 
-    // Get the agile category information.
-    $types = $connector->restAPI("statustype")->fetch();
-    $groups = $this->sortIssuesByStatus($issues, $types);
-    $group_keys = array_keys($groups);
-
-    // Agile header contents.
-    $content['agileheader'] = array(
-      '#theme' => "agileheader",
-      '#items' => $group_keys,
-      '#weight' => -1,
-    );
-
-    // Agile body contents.
-    $content['agilebody'] = array(
-      '#theme' => "agilebody",
-      '#groups' => $groups,
-    );
-
-    // Add the bodies.
-    $this->addBodies($content);
-
-    // Add the CSS
-    $content['#attached']['css'][] = drupal_get_path("module" , "stanford_jira_exposed") . "/css/stanford_jira_exposed.css";
-
-    // Return for rendering.
-    return $content;
+    asort($order);
+    $order = array_flip(array_values($order));
+    $groups = array_merge($order, $groups);
+    return $groups;
   }
-
 
   /**
    * Adds the above and below bodies to the output.
@@ -375,155 +609,5 @@ class StanfordJiraExposedBean extends BeanPlugin {
 
   }
 
-
-  // GETTERS AND SETTERS
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Why this no haz already?
-   * @return object BEAN
-   */
-  public function getBean() {
-    return $this->bean;
-  }
-
-  /**
-   * [setContent description]
-   * @param mixed $content [description]
-   */
-  public function setContent($content = "") {
-    $this->content = $content;
-  }
-
-  /**
-   * Gives back $this->content
-   * @return [type] [description]
-   */
-  public function getContent() {
-    return $this->content;
-  }
-
-  /**
-   * [setWrapped description]
-   * @param [type] $wrap [description]
-   */
-  public function setWrapped($wrap) {
-    $this->wrapped = $wrap;
-  }
-
-  /**
-   * [getWrapped description]
-   * @return [type] [description]
-   */
-  public function getWrapped() {
-    return $this->wrapped;
-  }
-
-  /**
-   * [getConnector description]
-   * @return [type] [description]
-   */
-  public function getConnector() {
-    if (empty($this->connector)) {
-      $this->connector = new \StanfordJiraExposed\JiraConnector();
-    }
-    return $this->connector;
-  }
-
-  /**
-   * [setConnector description]
-   * @param [type] $con [description]
-   */
-  public function setConnector($con) {
-    $this->connector = $con;
-  }
-
-
-  /**
-   * ***************************************************************************
-   * UTILITY FUNCTIONS
-   * ***************************************************************************
-   */
-
-  /**
-   * [filterGroups description]
-   * @param  [type] $items [description]
-   * @param  [type] $types [description]
-   * @return [type]        [description]
-   */
-  public function sortIssuesByStatus($items, $types) {
-    // JiraRestConnector.
-    $connector = $this->getConnector();
-    // For weighting.
-    $statusCategories = $connector->restAPI("statuscategories")->fetch();
-
-    // @Todo: Create way to pick the options or set a minimum instead of this.
-    $groups = array(
-      'Open' => array('catid' => 1), 'In Progress' => array('catid' => 2), 'Testing' => array('catid' => 4), 'Resolved' => array('catid' => 3),
-    );
-
-    // Loop through the categories so we get the correct order.
-    foreach ($statusCategories as $cat) {
-      foreach ($types as $type) {
-        // Skip ids that don't match so that we get the proper order.
-
-        if ($type->statusCategory->id !== $cat->id) {
-          continue;
-        }
-
-        $group = $this->filterIssuesByStatusType($items, $type);
-
-        if (!empty($group) || in_array($type->name, $groups)) {
-          $groups[$type->name] = $group;
-          $groups[$type->name]['catid'] = $cat->id;
-        }
-      }
-    }
-
-    // Custom ordering based on catId.
-    $order = $this->getCategorySortOrder();
-    stanford_jira_exposed_sort_by_category_key($groups, $order);
-    return $groups;
-  }
-
-  /**
-   * [stanford_jira_exposed_filter_issues_by_category description]
-   * @param  [type] $items    [description]
-   * @param  [type] $category [description]
-   * @return [type]           [description]
-   */
-  public function filterIssuesByStatusType($items, $type) {
-
-    foreach ($items as $i => $item) {
-      if ($item->fields->status->name !== $type->name) {
-        unset($items[$i]);
-      }
-    }
-
-    return $items;
-  }
-
-  /**
-   * [getCategorySortOrder description]
-   * @return [type] [description]
-   */
-  public function getCategorySortOrder() {
-    $order = array();
-    // JiraRestConnector.
-    $connector = $this->getConnector();
-    // For weighting.
-    $categories = $connector->restAPI("statuscategories")->fetch();
-    foreach ($categories as $i => $cat) {
-      $order[] = $cat->id;
-    }
-    return $order;
-  }
-
-  // /rest/greenhopper/1.0/rapidview/{rapid_view_id} //// to get the information about Scrum boards
-  // /rest/greenhopper/1.0/rapidviews/list
-  // /rest/greenhopper/1.0/sprintquery/{rapid_view_id}?includeFutureSprints=true  //// to get the information about sprints that are included in selected Scrum board
-  // /rest/greenhopper/1.0/sprints/
-  // /rest/greenhopper/1.0/sprint/{sprint_id?}
-  // /rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId={rapidViewId}&sprintId={sprintID} to get list of issues for that sprint.
 
 }
