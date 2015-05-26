@@ -53,8 +53,17 @@ abstract class EndpointAbstract implements EndpointInterface {
 
     // Create a settings obj.
     $settings = array_merge($defaults, $options);
-    $hash = md5(serialize($settings));
 
+    // Append any query parts.
+    if (isset($settings['query']) && is_array($settings['query'])) {
+      $settings['path'] .= "?";
+      foreach ($settings['query'] as $key => $value) {
+        $settings['path'] .= $key . "=" . urlencode($value) . "&";
+      }
+    }
+
+    // Cache hash.
+    $hash = md5(serialize($settings));
     $cache = $this->getCache($hash);
     if ($cache) {
       return $cache;

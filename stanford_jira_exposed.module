@@ -149,10 +149,12 @@ function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
   );
 
   $form['field_jira_jql']["#states"] = array(
-    'visible' => array(
+    'invisible' => array(
       '#edit-field-jira-layout-und' => array(
-        array('value' => "table"),
-        array('value' => "release"),
+        array('value' => "agile"),
+      ),
+      '#edit-field-jira-sprint-picker' => array(
+        array('!value' => "custom"),
       ),
     ),
   );
@@ -163,13 +165,18 @@ function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
   $sprints = $jira->greenhopperAPI("sprint")->picker();
   $rapid = $jira->greenhopperAPI("rapidview")->fetch();
 
-  $options = array();
+  $options = array(
+    'custom' => t("Custom JQL"),
+    '------' => t("--------------"),
+  );
+
   foreach ($sprints->allMatches as $k => $v) {
     $options[$v->id] = check_plain($v->name);
   }
 
   $form["field_jira_sprints"]['#access'] = FALSE;
   $form["field_jira_rapidview"]['#access'] = FALSE;
+    $default = !is_array($form['field_jira_sprints'][LANGUAGE_NONE][0]['value']) ? $form['field_jira_sprints'][LANGUAGE_NONE][0]['value'] : $form['field_jira_sprints'][LANGUAGE_NONE][0]['value']["#default_value"];
 
   // Add select field.
   $form["field_jira_sprint_picker"] = array(
@@ -177,8 +184,8 @@ function stanford_jira_exposed_form_bean_form_alter(&$form, &$form_state) {
     '#title' => $form['field_jira_sprints'][LANGUAGE_NONE]['#title'],
     '#description' => $form['field_jira_sprints'][LANGUAGE_NONE]['#description'],
     '#options' => $options,
-    '#weight' => $form['field_jira_sprints']['#weight'],
-    '#default_value' => $form['field_jira_sprints'][LANGUAGE_NONE][0]['value'],
+    '#weight' => $form['field_jira_sprints']['#weight'] - 1,
+    '#default_value' => $default,
     '#states' => array(
       'visible' => array(
         '#edit-field-jira-layout-und' => array('value' => "agile"),

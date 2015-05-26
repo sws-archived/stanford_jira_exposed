@@ -112,9 +112,28 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $rapidviewId = $bean->field_jira_rapidview->value();
     $sprintInfo = new stdClass();
     $content = array();
-
     $connector = new \StanfordJiraExposed\JiraConnector();
-    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+
+    // If we have custom jql lets get stuffs.
+    if ($sprintId == "custom") {
+      $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql, "max" => 1));
+      if (!$issues) {
+        return "<p>No issues found</p>";
+      }
+      $issue = array_pop($issues);
+      $projectKey = $issue->fields->project->key;
+      $rapid = $connector->greenhopperApi("rapidviews")->fetch(array("query" => array("projectKey" => $projectKey)));
+      if (!is_array($rapid->views)) {
+        return "<p>No issues found</p>";
+      }
+      $view = array_pop($rapid->views);
+      $rapidviewId = $view->id;
+    }
+
+    if (!$rapidviewId) {
+      return "<p>Could not obtain a rapidview id</p>";
+    }
+
     $xboard = $connector->greenhopperApi("xboard")->work("allData", array("rapidViewId" => $rapidviewId));
 
     // @Todo: check for valid response.
@@ -122,6 +141,11 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $sprints = $xboard->sprintsData->sprints;
     $issues = $xboard->issuesData->issues;
 
+
+    // If we are missing the sprint id lets get it from the xboard.
+    if (!is_numeric($sprintId)) {
+      $sprintId = $xboard->sprintsData->sprints[0]->id;
+    }
 
     // Get the sprint info.
     foreach ($sprints as $k => $sprint) {

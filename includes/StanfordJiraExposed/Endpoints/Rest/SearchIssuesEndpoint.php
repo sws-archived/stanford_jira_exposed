@@ -14,7 +14,8 @@ class SearchIssuesEndpoint extends EndpointAbstract {
    */
   public function fetch($options = array()) {
     $jql = $options['jql'];
-    $jira = jira_rest_searchissue($this->getUsername(), $this->getPassword(), $jql);
+    $max = isset($options['max']) ? $options['max'] : 999;
+    $jira = jira_rest_searchissue($this->getUsername(), $this->getPassword(), $jql, $max);
 
     if (isset($jira->issues)) {
       return $jira->issues;
