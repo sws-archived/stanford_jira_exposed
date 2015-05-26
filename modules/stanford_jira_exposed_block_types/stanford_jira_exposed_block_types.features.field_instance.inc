@@ -163,7 +163,7 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
       'module' => 'field_collection',
       'settings' => array(),
       'type' => 'field_collection_embed',
-      'weight' => 9,
+      'weight' => 13,
     ),
   );
 
@@ -227,7 +227,7 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 7,
+      'weight' => 10,
     ),
   );
 
@@ -262,7 +262,107 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 8,
+      'weight' => 9,
+    ),
+  );
+
+  // Exported field_instance: 'bean-stanford_jira-field_jira_rapidview'
+  $field_instances['bean-stanford_jira-field_jira_rapidview'] = array(
+    'bundle' => 'stanford_jira',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'number',
+        'settings' => array(
+          'decimal_separator' => '.',
+          'prefix_suffix' => TRUE,
+          'scale' => 0,
+          'thousand_separator' => ' ',
+        ),
+        'type' => 'number_integer',
+        'weight' => 11,
+      ),
+    ),
+    'entity_type' => 'bean',
+    'field_name' => 'field_jira_rapidview',
+    'label' => 'RapidView',
+    'required' => 0,
+    'settings' => array(
+      'max' => '',
+      'min' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 0,
+      'module' => 'number',
+      'settings' => array(),
+      'type' => 'number',
+      'weight' => 12,
+    ),
+  );
+
+  // Exported field_instance: 'bean-stanford_jira-field_jira_sprints'
+  $field_instances['bean-stanford_jira-field_jira_sprints'] = array(
+    'bundle' => 'stanford_jira',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'Select the sprint you wish to display',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 10,
+      ),
+    ),
+    'entity_type' => 'bean',
+    'field_name' => 'field_jira_sprints',
+    'label' => 'Sprint',
+    'required' => 0,
+    'settings' => array(
+      'better_formats' => array(
+        'allowed_formats' => array(
+          'content_editor_text_format' => 'content_editor_text_format',
+          'filtered_html' => 'filtered_html',
+          'full_html' => 'full_html',
+          'plain_text' => 'plain_text',
+        ),
+        'allowed_formats_toggle' => 0,
+        'default_order_toggle' => 0,
+        'default_order_wrapper' => array(
+          'formats' => array(
+            'content_editor_text_format' => array(
+              'weight' => -10,
+            ),
+            'filtered_html' => array(
+              'weight' => 0,
+            ),
+            'full_html' => array(
+              'weight' => 1,
+            ),
+            'plain_text' => array(
+              'weight' => 10,
+            ),
+          ),
+        ),
+      ),
+      'text_processing' => 0,
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'rows' => 5,
+      ),
+      'type' => 'text_textarea',
+      'weight' => 11,
     ),
   );
 
@@ -310,7 +410,10 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
   t('JQL');
   t('Jira Fields');
   t('Please enter the JQL statement for the issues you would like to display.');
+  t('RapidView');
   t('Select as many number of fields you wish to display. Please re-arrange to order.');
+  t('Select the sprint you wish to display');
+  t('Sprint');
 
   return $field_instances;
 }

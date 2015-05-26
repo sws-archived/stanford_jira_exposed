@@ -83,9 +83,9 @@ function stanford_jira_exposed_block_types_field_group_info() {
     'children' => array(
       0 => 'field_jira_jql',
       1 => 'field_jira_layout',
-      2 => 'field_jira_field_storage',
-      3 => 'field_jira_field_options',
-      4 => 'field_jira_fields',
+      2 => 'field_jira_fields',
+      3 => 'field_jira_sprints',
+      4 => 'field_jira_rapidview',
     ),
     'format_type' => 'tab',
     'format_settings' => array(
