@@ -81,11 +81,11 @@ function stanford_jira_exposed_block_types_field_group_info() {
     'label' => 'Jira Settings',
     'weight' => '3',
     'children' => array(
-      0 => 'field_jira_jql',
-      1 => 'field_jira_layout',
-      2 => 'field_jira_fields',
-      3 => 'field_jira_sprints',
-      4 => 'field_jira_rapidview',
+      0 => 'field_jira_layout',
+      1 => 'field_jira_fields',
+      2 => 'field_jira_sprints',
+      3 => 'field_jira_rapidview',
+      4 => 'field_jira_jql',
     ),
     'format_type' => 'tab',
     'format_settings' => array(

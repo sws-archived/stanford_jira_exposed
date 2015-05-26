@@ -172,24 +172,24 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
     'bundle' => 'stanford_jira',
     'default_value' => array(
       0 => array(
-        'value' => 'issuetype = Bug AND status = Open',
+        'value' => 'status = Open AND type = bug',
       ),
     ),
     'deleted' => 0,
-    'description' => 'Please enter the JQL statement for the issues you would like to display.',
+    'description' => 'Please enter the Jira Query Language query string you wish to select your issues by.',
     'display' => array(
       'default' => array(
         'label' => 'above',
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 5,
+        'weight' => 12,
       ),
     ),
     'entity_type' => 'bean',
     'field_name' => 'field_jira_jql',
-    'label' => 'JQL',
-    'required' => 1,
+    'label' => 'Jira JQL',
+    'required' => 0,
     'settings' => array(
       'better_formats' => array(
         'allowed_formats' => array(
@@ -224,10 +224,10 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
       'active' => 1,
       'module' => 'text',
       'settings' => array(
-        'size' => 60,
+        'rows' => 5,
       ),
-      'type' => 'text_textfield',
-      'weight' => 10,
+      'type' => 'text_textarea',
+      'weight' => 12,
     ),
   );
 
@@ -302,7 +302,7 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
       'module' => 'number',
       'settings' => array(),
       'type' => 'number',
-      'weight' => 12,
+      'weight' => 11,
     ),
   );
 
@@ -362,7 +362,7 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
         'rows' => 5,
       ),
       'type' => 'text_textarea',
-      'weight' => 11,
+      'weight' => 10,
     ),
   );
 
@@ -407,9 +407,9 @@ function stanford_jira_exposed_block_types_field_default_field_instances() {
   t('Body below');
   t('Choose a layout');
   t('Field Options');
-  t('JQL');
   t('Jira Fields');
-  t('Please enter the JQL statement for the issues you would like to display.');
+  t('Jira JQL');
+  t('Please enter the Jira Query Language query string you wish to select your issues by.');
   t('RapidView');
   t('Select as many number of fields you wish to display. Please re-arrange to order.');
   t('Select the sprint you wish to display');
