@@ -116,3 +116,13 @@
   margin-bottom: 3em;
   width: 100%;
 }
+
+/* line 108, stanford_jira_exposed.scss */
+.release-start-date {
+  padding-right: 10px;
+}
+
+/* line 111, stanford_jira_exposed.scss */
+.release-end-date {
+  padding-right: 10px;
+}
