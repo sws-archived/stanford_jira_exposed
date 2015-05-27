@@ -59,13 +59,25 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
     $fields = array();
+    $jqlfields = array();
     $fcs = $bean->field_jira_fields->value();
+    $skip = array("expand", "id", "self", "key");
+
     foreach ($fcs as $i => $fc_item) {
-      $fields[$fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"]] = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+      $value = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+      if (in_array($value, $skip)) {
+        $jqlfields[] = $value;
+      }
+      else {
+        $exp = explode(".", $value);
+        $jqlfields[] = $exp[1];
+      }
+      $fields[$value] = $value;
     }
 
+    // Get Issues and sort them.
     $connector = $this->getConnector();
-    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql, "fields" => $jqlfields));
 
     if (is_array($issues) && empty($issues)) {
       return "<p>No items found.</p>";
@@ -112,7 +124,7 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $rapidviewId = $bean->field_jira_rapidview->value();
     $sprintInfo = new stdClass();
     $content = array();
-    $connector = new \StanfordJiraExposed\JiraConnector();
+    $connector = $this->getConnector();
 
     // If we have custom jql lets get stuffs.
     if ($sprintId == "custom") {
@@ -230,14 +242,30 @@ class StanfordJiraExposedBean extends BeanPlugin {
     $bean = $this->getWrapped();
     $jql = $bean->field_jira_jql->value();
     $fields = array();
+    $jqlfields = array();
     $fcs = $bean->field_jira_fields->value();
+    $skip = array("expand", "id", "self", "key");
+
     foreach ($fcs as $i => $fc_item) {
-      $fields[$fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"]] = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+      $value = $fc_item->field_jira_field_options[LANGUAGE_NONE][0]["value"];
+
+      if (in_array($value, $skip)) {
+        $jqlfields[] = $value;
+      }
+      else {
+        $exp = explode(".", $value);
+        $jqlfields[] = $exp[1];
+      }
+
+      $fields[$value] = $value;
     }
+
+    // Always add to release.
+    $jqlfields[] = "fixVersions";
 
     // Get Issues and sort them.
     $connector = $this->getConnector();
-    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql));
+    $issues = $connector->restAPI("searchissues")->fetch(array("jql" => $jql, "fields" => $jqlfields));
     $groups = $this->groupIssuesByFixVersion($issues);
     $weight = 0;
 

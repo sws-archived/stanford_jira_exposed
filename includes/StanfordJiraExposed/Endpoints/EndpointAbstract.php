@@ -19,6 +19,8 @@ abstract class EndpointAbstract implements EndpointInterface {
   protected $connector;
   // Localized runtime cache.
   protected $cache;
+  // The curl handler
+  protected $ch;
 
   // ///////////////////////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////////////////
@@ -43,7 +45,6 @@ abstract class EndpointAbstract implements EndpointInterface {
   public function fetch($options = array()) {
     $connector = $this->getConnector();
 
-    // @todo: Cache stuff here.
     $defaults = array(
       'user' => $this->getUsername(),
       'pass' => $this->getPassword(),
@@ -62,23 +63,24 @@ abstract class EndpointAbstract implements EndpointInterface {
       }
     }
 
-    // Cache hash.
-    $hash = md5(serialize($settings));
-    $cache = $this->getCache($hash);
+    // Perform prefetch operations.
+    $hash = $this->getHash($settings);
+    $cache = $this->preFetch($hash, $settings);
     if ($cache) {
       return $cache;
     }
 
     // Fetch them.
-    $ch = $this->get_curl_resource($settings['user'], $settings['pass'], $settings['path'], $settings['method']);
+    $ch = $this->getCurlResource($settings['user'], $settings['pass'], $settings['path'], $settings['method']);
     try {
-      $results = jira_rest_curl_execute($ch);
+      $results = $this->jiraRestCurlExecute($ch);
     }
     catch(JiraRestExpection $e) {
       return FALSE;
     }
 
-    $this->setCache($hash, $results);
+    // Perform post fetch activities on the results.
+    $this->postFetch($hash, $results);
 
     // Save into categories and return.
     return $results;
@@ -87,6 +89,42 @@ abstract class EndpointAbstract implements EndpointInterface {
 
   // ///////////////////////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Handles the
+   * @param  array  $settings [description]
+   * @return [type]           [description]
+   */
+  public function preFetch($hash, &$settings) {
+    // Cache hash so we don't make duplicate calls.
+    $cache = $this->getCache($hash);
+    if ($cache) {
+      return $cache;
+    }
+  }
+
+  /**
+   * [postFetch description]
+   * @param  [type] $hash    [description]
+   * @param  [type] $results [description]
+   * @return [type]          [description]
+   */
+  public function postFetch($hash, $results) {
+    // Store the results for the query in cache in case we try to call it again.
+    $this->setCache($hash, $results);
+  }
+
+  // ///////////////////////////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////////////////////////////
+
+  /**
+   * [getHash description]
+   * @param  [type] $settings [description]
+   * @return [type]           [description]
+   */
+  protected function getHash($settings = array()) {
+    return md5(serialize($settings));
+  }
 
   /**
    * [getPath description]
@@ -181,12 +219,31 @@ abstract class EndpointAbstract implements EndpointInterface {
     $this->base = $base;
   }
 
+  /**
+   * [setCurlHandler description]
+   * @param [type] $ch [description]
+   */
+  protected function setCurlHandler($ch) {
+    $this->ch = $ch;
+  }
 
   /**
-   * [get_curl_resource description]
+   * [getCurlHandler description]
    * @return [type] [description]
    */
-  public function get_curl_resource($username, $password, $url, $method = "GET") {
+  protected function getCurlHandler() {
+    if (!is_null($this->ch)) {
+      $this->ch = $this->getCurlResource($this->getUsername(), $this->getPassword(), $this->getPath());
+    }
+    return $this->ch;
+  }
+
+
+  /**
+   * [getCurlResource description]
+   * @return [type] [description]
+   */
+  public function getCurlResource($username, $password, $url, $method = "GET") {
 
     $jira_url = variable_get('jira_rest_jirainstanceurl', 'https://localhost:8443') . $this->get_base();
 
@@ -199,6 +256,15 @@ abstract class EndpointAbstract implements EndpointInterface {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
     return $ch;
+  }
+
+  /**
+   * [jiraRestCurlExecute description]
+   * @param  [type] $ch [description]
+   * @return [type]     [description]
+   */
+  public function jiraRestCurlExecute($ch) {
+    return jira_rest_curl_execute($ch);
   }
 
 }

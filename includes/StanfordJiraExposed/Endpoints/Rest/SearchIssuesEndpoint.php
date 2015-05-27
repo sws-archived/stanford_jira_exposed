@@ -8,6 +8,8 @@ use StanfordJiraExposed\Endpoints\EndpointAbstract;
 
 class SearchIssuesEndpoint extends EndpointAbstract {
 
+  protected $path = "/search";
+
   /**
    * [fetch description]
    * @return [type] [description]
@@ -15,13 +17,24 @@ class SearchIssuesEndpoint extends EndpointAbstract {
   public function fetch($options = array()) {
     $jql = $options['jql'];
     $max = isset($options['max']) ? $options['max'] : 999;
-    $jira = jira_rest_searchissue($this->getUsername(), $this->getPassword(), $jql, $max);
 
-    if (isset($jira->issues)) {
-      return $jira->issues;
+    $options['query'] = array(
+      'jql' => $jql,
+      'maxResults' => $max,
+    );
+
+    // Add fields if available.
+    if (!empty($options['fields'])) {
+      $options['query']['fields'] = implode(",", $options['fields']);
     }
 
-    throw new Exception("Could not get issues");
+    $results = parent::fetch($options);
+
+    if (!empty($results->issues)) {
+      return $results->issues;
+    }
+
+    return array();
   }
 
 }

@@ -104,6 +104,11 @@ class JiraConnector {
   public function restAPI($type) {
     $base = "/rest/api/latest";
     $ep = FALSE;
+    $cache = $this->getCache();
+
+    if (isset($cache['rest'][$type])) {
+      return $cache['rest'][$type];
+    }
 
     switch ($type) {
 
@@ -140,6 +145,9 @@ class JiraConnector {
 
     }
 
+    $cache['rest'][$type] = $ep;
+    $this->setCache($cache);
+
     return $ep;
   }
 
@@ -151,6 +159,11 @@ class JiraConnector {
   public function greenhopperAPI($type) {
     $base = "/rest/greenhopper/1.0";
     $ep = FALSE;
+    $cache = $this->getCache();
+
+    if (isset($cache['greenhopper'][$type])) {
+      return $cache['greenhopper'][$type];
+    }
 
     switch ($type) {
 
@@ -176,13 +189,37 @@ class JiraConnector {
         break;
 
       default:
-        throw new Exception("Error Processing Request");
+        throw new \Exception("Error Processing Request");
       break;
 
     }
 
+    $cache['greenhopper'][$type] = $ep;
+    $this->setCache($cache);
+
     return $ep;
   }
 
+  // ///////////////////////////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////////////////////////////
+
+  /**
+   * [setCache description]
+   * @param [type] $cache [description]
+   */
+  protected function setCache($cache) {
+    $this->cache = $cache;
+  }
+
+  /**
+   * [getCache description]
+   * @return [type] [description]
+   */
+  protected function getCache() {
+    if (!is_array($this->cache)) {
+      $this->cache = array();
+    }
+    return $this->cache;
+  }
 
 }
